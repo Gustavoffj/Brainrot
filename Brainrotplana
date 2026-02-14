@@ -18,8 +18,8 @@ local CONFIG = {
     TextColor = Color3.fromRGB(255, 255, 255),    -- Cor do texto
     
     -- Tamanhos
-    PanelWidth = 350,     -- Largura do painel
-    PanelHeight = 450,    -- Altura do painel
+    PanelWidth = 300,     -- Largura do painel
+    PanelHeight = 220,    -- Altura do painel
     ButtonHeight = 45,    -- Altura dos botões
     
     -- Transparência
@@ -191,6 +191,55 @@ local function teleportTo(position)
     end
 end
 
+-- ═══════════════════════════════════════════════
+-- SISTEMA DE TPTOOL
+-- ═══════════════════════════════════════════════
+local function giveTpTool()
+    local character = player.Character
+    if not character then return end
+    
+    local backpack = player:FindFirstChild("Backpack")
+    if not backpack then return end
+    
+    -- Verificar se já tem o TPTool
+    if backpack:FindFirstChild("TPTool") or character:FindFirstChild("TPTool") then
+        return
+    end
+    
+    -- Criar TPTool
+    local tool = Instance.new("Tool")
+    tool.Name = "TPTool"
+    tool.RequiresHandle = false
+    tool.CanBeDropped = false
+    
+    -- Ícone do cursor
+    tool.TextureId = "rbxasset://textures/TerrainTools/icon_select.png"
+    
+    tool.Activated:Connect(function()
+        local mouse = player:GetMouse()
+        if mouse then
+            local targetPos = mouse.Hit.Position
+            teleportTo(targetPos)
+        end
+    end)
+    
+    tool.Parent = backpack
+end
+
+-- Dar TPTool ao iniciar
+task.spawn(function()
+    if player.Character then
+        giveTpTool()
+    end
+end)
+
+-- Dar TPTool quando morrer e respawnar
+player.CharacterAdded:Connect(function(character)
+    character:WaitForChild("Humanoid")
+    task.wait(0.5) -- Aguardar o personagem carregar
+    giveTpTool()
+end)
+
 -- Botão Teleporte Inicial
 createButton("📍 TP Inicial", UDim2.new(0, 0, 0, 0), function()
     teleportTo(Vector3.new(-149.879, 0.1, -363.475))
@@ -201,10 +250,10 @@ createButton("🛡️ TP Safezone Final", UDim2.new(0, 0, 0, 55), function()
     teleportTo(CONFIG.SafezonePos)
 end)
 
--- Botão Criar Bloco TP
-createButton("🟦 Criar Bloco TP", UDim2.new(0, 0, 0, 110), function()
-    -- Teleportar para a localização do bloco
-    teleportTo(Vector3.new(-7585.879, 90, -316.975))
+-- Botão Criar Bloco TP e teleportar em cima
+createButton("🟦 TP Bloco", UDim2.new(0, 0, 0, 110), function()
+    -- Teleportar em cima do bloco (altura ajustada)
+    teleportTo(Vector3.new(-7585.879, 95, -316.975))
     
     -- Verificar se já existe
     local existingBlock = workspace:FindFirstChild("TSUGTeleportBlock")
@@ -242,49 +291,9 @@ createButton("🟦 Criar Bloco TP", UDim2.new(0, 0, 0, 110), function()
     -- Teleporte ao tocar
     tpBlock.Touched:Connect(function(hit)
         if hit.Parent == player.Character then
-            teleportTo(Vector3.new(-7585.879, 91, -316.975))
+            teleportTo(Vector3.new(-7585.879, 95, -316.975))
         end
     end)
-end)
-
--- Botão Deletar MapAtmosphere
-createButton("🌫️ Deletar MapAtmosphere", UDim2.new(0, 0, 0, 165), function()
-    local mapAtmosphere = workspace:FindFirstChild("MapAtmosphere")
-    if mapAtmosphere then
-        -- Método 1: Tornar invisível localmente
-        for _, descendant in pairs(mapAtmosphere:GetDescendants()) do
-            if descendant:IsA("BasePart") then
-                descendant.Transparency = 1
-                descendant.CanCollide = false
-            elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
-                descendant.Transparency = 1
-            elseif descendant:IsA("ParticleEmitter") or descendant:IsA("Fire") or descendant:IsA("Smoke") then
-                descendant.Enabled = false
-            end
-        end
-        
-        -- Método 2: Esconder completamente (exploit)
-        mapAtmosphere.Parent = nil
-    end
-end)
-
--- Botão Deletar MapRoof
-createButton("🏠 Deletar MapRoof", UDim2.new(0, 0, 0, 220), function()
-    local mapRoof = workspace:FindFirstChild("MapRoof")
-    if mapRoof then
-        -- Método 1: Tornar invisível localmente
-        for _, descendant in pairs(mapRoof:GetDescendants()) do
-            if descendant:IsA("BasePart") then
-                descendant.Transparency = 1
-                descendant.CanCollide = false
-            elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
-                descendant.Transparency = 1
-            end
-        end
-        
-        -- Método 2: Esconder completamente (exploit)
-        mapRoof.Parent = nil
-    end
 end)
 
 -- Sistema de Arrastar
