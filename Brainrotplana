@@ -6,6 +6,65 @@ local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 local player = Players.LocalPlayer
 
+-- ═══════════════════════════════════════════════
+-- CONFIGURAÇÕES PERSONALIZÁVEIS
+-- ═══════════════════════════════════════════════
+local CONFIG = {
+    -- Cores do painel
+    PanelColor = Color3.fromRGB(35, 35, 35),      -- Cor de fundo do painel
+    TitleBarColor = Color3.fromRGB(25, 25, 25),   -- Cor da barra de título
+    ButtonColor = Color3.fromRGB(45, 45, 45),     -- Cor dos botões
+    ButtonHoverColor = Color3.fromRGB(60, 60, 60), -- Cor ao passar mouse
+    TextColor = Color3.fromRGB(255, 255, 255),    -- Cor do texto
+    
+    -- Tamanhos
+    PanelWidth = 350,     -- Largura do painel
+    PanelHeight = 450,    -- Altura do painel
+    ButtonHeight = 45,    -- Altura dos botões
+    
+    -- Transparência
+    PanelTransparency = 0,   -- 0 = opaco, 1 = invisível
+    
+    -- Safezone (coordenadas)
+    SafezonePos = Vector3.new(-8093.379, 16.6, -371.975),
+}
+
+-- Auto-deletar MapAtmosphere e MapRoof ao executar
+local function autoDelete()
+    -- Deletar MapAtmosphere
+    local mapAtmosphere = workspace:FindFirstChild("MapAtmosphere")
+    if mapAtmosphere then
+        for _, descendant in pairs(mapAtmosphere:GetDescendants()) do
+            if descendant:IsA("BasePart") then
+                descendant.Transparency = 1
+                descendant.CanCollide = false
+            elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
+                descendant.Transparency = 1
+            elseif descendant:IsA("ParticleEmitter") or descendant:IsA("Fire") or descendant:IsA("Smoke") then
+                descendant.Enabled = false
+            end
+        end
+        mapAtmosphere.Parent = nil
+    end
+    
+    -- Deletar MapRoof
+    local mapRoof = workspace:FindFirstChild("MapRoof")
+    if mapRoof then
+        for _, descendant in pairs(mapRoof:GetDescendants()) do
+            if descendant:IsA("BasePart") then
+                descendant.Transparency = 1
+                descendant.CanCollide = false
+            elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
+                descendant.Transparency = 1
+            end
+        end
+        mapRoof.Parent = nil
+    end
+end
+
+-- Executar auto-delete
+autoDelete()
+
 -- Proteger GUI contra detecção
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "TSUGPanel_" .. math.random(1000, 9999)
@@ -28,9 +87,10 @@ end
 -- Frame Principal (Painel)
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 350, 0, 400)
-mainFrame.Position = UDim2.new(0.5, -175, 0.5, -200)
-mainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+mainFrame.Size = UDim2.new(0, CONFIG.PanelWidth, 0, CONFIG.PanelHeight)
+mainFrame.Position = UDim2.new(0.5, -CONFIG.PanelWidth/2, 0.5, -CONFIG.PanelHeight/2)
+mainFrame.BackgroundColor3 = CONFIG.PanelColor
+mainFrame.BackgroundTransparency = CONFIG.PanelTransparency
 mainFrame.BorderSizePixel = 0
 mainFrame.Parent = screenGui
 
@@ -43,7 +103,7 @@ corner.Parent = mainFrame
 local titleBar = Instance.new("Frame")
 titleBar.Name = "TitleBar"
 titleBar.Size = UDim2.new(1, 0, 0, 40)
-titleBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+titleBar.BackgroundColor3 = CONFIG.TitleBarColor
 titleBar.BorderSizePixel = 0
 titleBar.Parent = mainFrame
 
@@ -57,7 +117,7 @@ titleLabel.Size = UDim2.new(1, -80, 1, 0)
 titleLabel.Position = UDim2.new(0, 10, 0, 0)
 titleLabel.BackgroundTransparency = 1
 titleLabel.Text = "tsug"
-titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextColor3 = CONFIG.TextColor
 titleLabel.TextSize = 20
 titleLabel.Font = Enum.Font.GothamBold
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -68,9 +128,9 @@ local minimizeButton = Instance.new("TextButton")
 minimizeButton.Name = "MinimizeButton"
 minimizeButton.Size = UDim2.new(0, 30, 0, 30)
 minimizeButton.Position = UDim2.new(1, -35, 0, 5)
-minimizeButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+minimizeButton.BackgroundColor3 = CONFIG.ButtonColor
 minimizeButton.Text = "_"
-minimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+minimizeButton.TextColor3 = CONFIG.TextColor
 minimizeButton.TextSize = 18
 minimizeButton.Font = Enum.Font.GothamBold
 minimizeButton.Parent = titleBar
@@ -90,11 +150,11 @@ contentFrame.Parent = mainFrame
 -- Função para criar botões
 local function createButton(text, position, callback)
     local button = Instance.new("TextButton")
-    button.Size = UDim2.new(1, 0, 0, 45)
+    button.Size = UDim2.new(1, 0, 0, CONFIG.ButtonHeight)
     button.Position = position
-    button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    button.BackgroundColor3 = CONFIG.ButtonColor
     button.Text = text
-    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.TextColor3 = CONFIG.TextColor
     button.TextSize = 16
     button.Font = Enum.Font.Gotham
     button.Parent = contentFrame
@@ -105,11 +165,11 @@ local function createButton(text, position, callback)
     
     -- Efeito de hover
     button.MouseEnter:Connect(function()
-        button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        button.BackgroundColor3 = CONFIG.ButtonHoverColor
     end)
     
     button.MouseLeave:Connect(function()
-        button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+        button.BackgroundColor3 = CONFIG.ButtonColor
     end)
     
     button.MouseButton1Click:Connect(callback)
@@ -133,16 +193,19 @@ end
 
 -- Botão Teleporte Inicial
 createButton("📍 TP Inicial", UDim2.new(0, 0, 0, 0), function()
-    teleportTo(Vector3.new(-114.879, -2.5, -371.975))
+    teleportTo(Vector3.new(-149.879, 0.1, -363.475))
 end)
 
 -- Botão Teleporte Safezone Final
 createButton("🛡️ TP Safezone Final", UDim2.new(0, 0, 0, 55), function()
-    teleportTo(Vector3.new(-8093.379, 16.6, -371.975))
+    teleportTo(CONFIG.SafezonePos)
 end)
 
 -- Botão Criar Bloco TP
 createButton("🟦 Criar Bloco TP", UDim2.new(0, 0, 0, 110), function()
+    -- Teleportar para a localização do bloco
+    teleportTo(Vector3.new(-7585.879, 90, -316.975))
+    
     -- Verificar se já existe
     local existingBlock = workspace:FindFirstChild("TSUGTeleportBlock")
     if existingBlock then
@@ -270,7 +333,7 @@ minimizeButton.MouseButton1Click:Connect(function()
     
     local targetSize
     if minimized then
-        targetSize = UDim2.new(0, 350, 0, 40)
+        targetSize = UDim2.new(0, CONFIG.PanelWidth, 0, 40)
         minimizeButton.Text = "+"
         contentFrame.Visible = false
     else
@@ -283,6 +346,125 @@ minimizeButton.MouseButton1Click:Connect(function()
     local tween = TweenService:Create(mainFrame, tweenInfo, {Size = targetSize})
     tween:Play()
 end)
+
+-- ═══════════════════════════════════════════════
+-- SISTEMA DE DETECÇÃO DE REMOTEEVENT
+-- ═══════════════════════════════════════════════
+local detectionActive = true
+local detectionRange = 50 -- Distância em studs para detectar
+
+-- Lista de nomes de RemoteEvents perigosos
+local dangerousEvents = {
+    "slow",
+    "normal", 
+    "superslow",
+    "Slow",
+    "Normal",
+    "SuperSlow",
+    "SLOW",
+    "NORMAL",
+    "SUPERSLOW"
+}
+
+-- Função para verificar se é um evento perigoso
+local function isDangerousEvent(name)
+    for _, eventName in pairs(dangerousEvents) do
+        if string.lower(name):find(string.lower(eventName)) then
+            return true
+        end
+    end
+    return false
+end
+
+-- Monitorar novos RemoteEvents criados
+local function monitorRemoteEvents()
+    -- Verificar todos os descendants do workspace
+    for _, descendant in pairs(workspace:GetDescendants()) do
+        if descendant:IsA("RemoteEvent") and isDangerousEvent(descendant.Name) then
+            -- Monitorar posição do evento
+            task.spawn(function()
+                while descendant.Parent and detectionActive do
+                    local character = player.Character
+                    if character then
+                        local hrp = character:FindFirstChild("HumanoidRootPart")
+                        if hrp and descendant:IsA("BasePart") or descendant.Parent:IsA("Model") then
+                            local eventPos
+                            
+                            -- Tentar pegar posição do evento
+                            if descendant:IsA("BasePart") then
+                                eventPos = descendant.Position
+                            elseif descendant.Parent:IsA("Model") and descendant.Parent.PrimaryPart then
+                                eventPos = descendant.Parent.PrimaryPart.Position
+                            elseif descendant.Parent:FindFirstChildWhichIsA("BasePart") then
+                                eventPos = descendant.Parent:FindFirstChildWhichIsA("BasePart").Position
+                            end
+                            
+                            if eventPos then
+                                local distance = (hrp.Position - eventPos).Magnitude
+                                
+                                if distance <= detectionRange then
+                                    -- Salvar posição atual
+                                    local originalPos = hrp.CFrame
+                                    
+                                    -- Teleportar para safezone
+                                    teleportTo(CONFIG.SafezonePos)
+                                    
+                                    -- Esperar 1 segundo e voltar
+                                    task.wait(1)
+                                    hrp.CFrame = originalPos
+                                    
+                                    task.wait(2) -- Cooldown
+                                end
+                            end
+                        end
+                    end
+                    task.wait(0.1)
+                end
+            end)
+        end
+    end
+end
+
+-- Monitorar novos objetos adicionados
+workspace.DescendantAdded:Connect(function(descendant)
+    if descendant:IsA("RemoteEvent") and isDangerousEvent(descendant.Name) then
+        task.spawn(function()
+            while descendant.Parent and detectionActive do
+                local character = player.Character
+                if character then
+                    local hrp = character:FindFirstChild("HumanoidRootPart")
+                    if hrp then
+                        local eventPos
+                        
+                        if descendant:IsA("BasePart") then
+                            eventPos = descendant.Position
+                        elseif descendant.Parent:IsA("Model") and descendant.Parent.PrimaryPart then
+                            eventPos = descendant.Parent.PrimaryPart.Position
+                        elseif descendant.Parent:FindFirstChildWhichIsA("BasePart") then
+                            eventPos = descendant.Parent:FindFirstChildWhichIsA("BasePart").Position
+                        end
+                        
+                        if eventPos then
+                            local distance = (hrp.Position - eventPos).Magnitude
+                            
+                            if distance <= detectionRange then
+                                local originalPos = hrp.CFrame
+                                teleportTo(CONFIG.SafezonePos)
+                                task.wait(1)
+                                hrp.CFrame = originalPos
+                                task.wait(2)
+                            end
+                        end
+                    end
+                end
+                task.wait(0.1)
+            end
+        end)
+    end
+end)
+
+-- Iniciar monitoramento
+monitorRemoteEvents()
 
 -- Notificação de carregamento
 game:GetService("StarterGui"):SetCore("SendNotification", {
