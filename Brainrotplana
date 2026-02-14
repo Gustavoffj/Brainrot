@@ -1,0 +1,297 @@
+-- Script TSUG Panel - Painel Arrastável com Teleportes
+-- Execute este script em qualquer executor (Synapse, KRNL, Fluxus, etc)
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+local player = Players.LocalPlayer
+
+-- Proteger GUI contra detecção
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "TSUGPanel_" .. math.random(1000, 9999)
+screenGui.ResetOnSpawn = false
+
+-- Tentar colocar no CoreGui (mais seguro)
+local success = pcall(function()
+    screenGui.Parent = CoreGui
+end)
+
+-- Se falhar, usar gethui() ou PlayerGui
+if not success then
+    if gethui then
+        screenGui.Parent = gethui()
+    else
+        screenGui.Parent = player:WaitForChild("PlayerGui")
+    end
+end
+
+-- Frame Principal (Painel)
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 350, 0, 400)
+mainFrame.Position = UDim2.new(0.5, -175, 0.5, -200)
+mainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = screenGui
+
+-- Arredondar cantos
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 12)
+corner.Parent = mainFrame
+
+-- Barra de Título
+local titleBar = Instance.new("Frame")
+titleBar.Name = "TitleBar"
+titleBar.Size = UDim2.new(1, 0, 0, 40)
+titleBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+titleBar.BorderSizePixel = 0
+titleBar.Parent = mainFrame
+
+local titleCorner = Instance.new("UICorner")
+titleCorner.CornerRadius = UDim.new(0, 12)
+titleCorner.Parent = titleBar
+
+-- Título
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, -80, 1, 0)
+titleLabel.Position = UDim2.new(0, 10, 0, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "tsug"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextSize = 20
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.Parent = titleBar
+
+-- Botão Minimizar
+local minimizeButton = Instance.new("TextButton")
+minimizeButton.Name = "MinimizeButton"
+minimizeButton.Size = UDim2.new(0, 30, 0, 30)
+minimizeButton.Position = UDim2.new(1, -35, 0, 5)
+minimizeButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+minimizeButton.Text = "_"
+minimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+minimizeButton.TextSize = 18
+minimizeButton.Font = Enum.Font.GothamBold
+minimizeButton.Parent = titleBar
+
+local minCorner = Instance.new("UICorner")
+minCorner.CornerRadius = UDim.new(0, 6)
+minCorner.Parent = minimizeButton
+
+-- Container de Conteúdo
+local contentFrame = Instance.new("Frame")
+contentFrame.Name = "ContentFrame"
+contentFrame.Size = UDim2.new(1, -20, 1, -60)
+contentFrame.Position = UDim2.new(0, 10, 0, 50)
+contentFrame.BackgroundTransparency = 1
+contentFrame.Parent = mainFrame
+
+-- Função para criar botões
+local function createButton(text, position, callback)
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(1, 0, 0, 45)
+    button.Position = position
+    button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    button.Text = text
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.TextSize = 16
+    button.Font = Enum.Font.Gotham
+    button.Parent = contentFrame
+    
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 8)
+    btnCorner.Parent = button
+    
+    -- Efeito de hover
+    button.MouseEnter:Connect(function()
+        button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    end)
+    
+    button.MouseLeave:Connect(function()
+        button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    end)
+    
+    button.MouseButton1Click:Connect(callback)
+    
+    return button
+end
+
+-- Função de Teleporte (compatível com exploits)
+local function teleportTo(position)
+    local character = player.Character or player.CharacterAdded:Wait()
+    if character then
+        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+        if humanoidRootPart then
+            -- Método mais seguro para exploits
+            humanoidRootPart.CFrame = CFrame.new(position)
+            wait(0.1)
+            humanoidRootPart.CFrame = CFrame.new(position)
+        end
+    end
+end
+
+-- Botão Teleporte Inicial
+createButton("📍 TP Inicial", UDim2.new(0, 0, 0, 0), function()
+    teleportTo(Vector3.new(-114.879, -2.5, -371.975))
+end)
+
+-- Botão Teleporte Safezone Final
+createButton("🛡️ TP Safezone Final", UDim2.new(0, 0, 0, 55), function()
+    teleportTo(Vector3.new(-8093.379, 16.6, -371.975))
+end)
+
+-- Botão Criar Bloco TP
+createButton("🟦 Criar Bloco TP", UDim2.new(0, 0, 0, 110), function()
+    -- Verificar se já existe
+    local existingBlock = workspace:FindFirstChild("TSUGTeleportBlock")
+    if existingBlock then
+        existingBlock:Destroy()
+    end
+    
+    -- Criar novo bloco (apenas client-side)
+    local tpBlock = Instance.new("Part")
+    tpBlock.Name = "TSUGTeleportBlock"
+    tpBlock.Size = Vector3.new(8, 1, 8)
+    tpBlock.Position = Vector3.new(-7585.879, 90, -316.975)
+    tpBlock.Anchored = true
+    tpBlock.CanCollide = true
+    tpBlock.BrickColor = BrickColor.new("Bright blue")
+    tpBlock.Material = Enum.Material.Neon
+    tpBlock.Transparency = 0.3
+    tpBlock.Parent = workspace
+    
+    -- Texto no bloco
+    local billboard = Instance.new("BillboardGui")
+    billboard.Size = UDim2.new(0, 100, 0, 50)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
+    billboard.Parent = tpBlock
+    
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(1, 0, 1, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = "TP"
+    textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textLabel.TextSize = 30
+    textLabel.Font = Enum.Font.GothamBold
+    textLabel.Parent = billboard
+    
+    -- Teleporte ao tocar
+    tpBlock.Touched:Connect(function(hit)
+        if hit.Parent == player.Character then
+            teleportTo(Vector3.new(-7585.879, 91, -316.975))
+        end
+    end)
+end)
+
+-- Botão Deletar MapAtmosphere
+createButton("🌫️ Deletar MapAtmosphere", UDim2.new(0, 0, 0, 165), function()
+    local mapAtmosphere = workspace:FindFirstChild("MapAtmosphere")
+    if mapAtmosphere then
+        -- Método 1: Tornar invisível localmente
+        for _, descendant in pairs(mapAtmosphere:GetDescendants()) do
+            if descendant:IsA("BasePart") then
+                descendant.Transparency = 1
+                descendant.CanCollide = false
+            elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
+                descendant.Transparency = 1
+            elseif descendant:IsA("ParticleEmitter") or descendant:IsA("Fire") or descendant:IsA("Smoke") then
+                descendant.Enabled = false
+            end
+        end
+        
+        -- Método 2: Esconder completamente (exploit)
+        mapAtmosphere.Parent = nil
+    end
+end)
+
+-- Botão Deletar MapRoof
+createButton("🏠 Deletar MapRoof", UDim2.new(0, 0, 0, 220), function()
+    local mapRoof = workspace:FindFirstChild("MapRoof")
+    if mapRoof then
+        -- Método 1: Tornar invisível localmente
+        for _, descendant in pairs(mapRoof:GetDescendants()) do
+            if descendant:IsA("BasePart") then
+                descendant.Transparency = 1
+                descendant.CanCollide = false
+            elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
+                descendant.Transparency = 1
+            end
+        end
+        
+        -- Método 2: Esconder completamente (exploit)
+        mapRoof.Parent = nil
+    end
+end)
+
+-- Sistema de Arrastar
+local dragging = false
+local dragInput
+local dragStart
+local startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+titleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+titleBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
+end)
+
+-- Sistema de Minimizar
+local minimized = false
+local originalSize = mainFrame.Size
+
+minimizeButton.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    
+    local targetSize
+    if minimized then
+        targetSize = UDim2.new(0, 350, 0, 40)
+        minimizeButton.Text = "+"
+        contentFrame.Visible = false
+    else
+        targetSize = originalSize
+        minimizeButton.Text = "_"
+        contentFrame.Visible = true
+    end
+    
+    local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local tween = TweenService:Create(mainFrame, tweenInfo, {Size = targetSize})
+    tween:Play()
+end)
+
+-- Notificação de carregamento
+game:GetService("StarterGui"):SetCore("SendNotification", {
+    Title = "TSUG Panel";
+    Text = "Painel carregado com sucesso!";
+    Duration = 3;
+})
+
+print("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+print("TSUG Panel v1.0")
+print("Status: ✓ Carregado")
+print("━━━━━━━━━━━━━━━━━━━━━━━━━━")
