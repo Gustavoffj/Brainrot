@@ -297,12 +297,11 @@ createButton("🟦 TP Bloco", UDim2.new(0, 0, 0, 110), function()
 end)
 
 -- ═══════════════════════════════════════════════
--- SISTEMA DE AUTO TP (Detecta MeshParts em movimento)
+-- SISTEMA DE AUTO TP (Detecta MeshParts perigosas)
 -- ═══════════════════════════════════════════════
 local autoTpActive = false
 local autoTpButton
-local monitoredParts = {}
-local detectionRange = 20 -- Distância em studs para teleportar
+local detectionRange = 15 -- Distância em studs para teleportar
 
 -- Lista de nomes perigosos para MeshParts
 local dangerousMeshNames = {
@@ -321,79 +320,31 @@ local function isDangerousMesh(name)
     return false
 end
 
--- Função para verificar se a parte está vindo na direção do player
-local function isComingTowardsPlayer(part, oldPos, newPos)
-    local character = player.Character
-    if not character then return false end
-    
-    local hrp = character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return false end
-    
-    -- Calcular distâncias
-    local oldDistance = (oldPos - hrp.Position).Magnitude
-    local newDistance = (newPos - hrp.Position).Magnitude
-    
-    -- Se a nova distância é menor que a antiga, está se aproximando
-    return newDistance < oldDistance
-end
-
--- Função para monitorar uma MeshPart específica
-local function monitorMeshPart(meshPart)
-    if monitoredParts[meshPart] then return end
-    
-    monitoredParts[meshPart] = true
-    
+-- Loop principal de detecção
+local function startAutoTp()
     task.spawn(function()
-        local lastPosition = meshPart.Position
-        
-        while autoTpActive and meshPart.Parent and monitoredParts[meshPart] do
+        while autoTpActive do
             task.wait(0.1)
             
             local character = player.Character
             if character then
                 local hrp = character:FindFirstChild("HumanoidRootPart")
                 if hrp then
-                    local currentPosition = meshPart.Position
-                    
-                    -- Verificar se está em movimento
-                    local hasMoved = (currentPosition - lastPosition).Magnitude > 0.5
-                    
-                    if hasMoved then
-                        -- Verificar se está vindo em direção ao player
-                        if isComingTowardsPlayer(meshPart, lastPosition, currentPosition) then
-                            -- Verificar distância
-                            local distance = (currentPosition - hrp.Position).Magnitude
+                    -- Verificar todas as MeshParts no workspace
+                    for _, obj in pairs(workspace:GetDescendants()) do
+                        if obj:IsA("MeshPart") and isDangerousMesh(obj.Name) then
+                            local distance = (obj.Position - hrp.Position).Magnitude
                             
+                            -- Se estiver muito perto, teleportar!
                             if distance <= detectionRange then
-                                -- TELEPORTAR PARA O INÍCIO!
                                 teleportTo(Vector3.new(-149.879, 0.1, -363.475))
-                                task.wait(2) -- Cooldown
+                                task.wait(2) -- Cooldown de 2 segundos
+                                break
                             end
                         end
                     end
-                    
-                    lastPosition = currentPosition
                 end
             end
-        end
-        
-        monitoredParts[meshPart] = nil
-    end)
-end
-
--- Função para iniciar monitoramento
-local function startAutoTp()
-    -- Monitorar todas as MeshParts existentes
-    for _, descendant in pairs(workspace:GetDescendants()) do
-        if descendant:IsA("MeshPart") and isDangerousMesh(descendant.Name) then
-            monitorMeshPart(descendant)
-        end
-    end
-    
-    -- Monitorar novas MeshParts adicionadas
-    workspace.DescendantAdded:Connect(function(descendant)
-        if autoTpActive and descendant:IsA("MeshPart") and isDangerousMesh(descendant.Name) then
-            monitorMeshPart(descendant)
         end
     end)
 end
@@ -409,7 +360,6 @@ autoTpButton = createButton("🛡️ Auto TP (OFF)", UDim2.new(0, 0, 0, 165), fu
     else
         autoTpButton.Text = "🛡️ Auto TP (OFF)"
         autoTpButton.BackgroundColor3 = CONFIG.ButtonColor
-        monitoredParts = {}
     end
 end)
 
@@ -418,7 +368,7 @@ local statusLabel = Instance.new("TextLabel")
 statusLabel.Size = UDim2.new(1, 0, 0, 30)
 statusLabel.Position = UDim2.new(0, 0, 0, 220)
 statusLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-statusLabel.Text = "🔍 Detectando MeshParts perigosas"
+statusLabel.Text = "🔍 Detecta MeshParts (15 studs)"
 statusLabel.TextColor3 = CONFIG.TextColor
 statusLabel.TextSize = 14
 statusLabel.Font = Enum.Font.Gotham
@@ -580,4 +530,41 @@ workspace.DescendantAdded:Connect(function(descendant)
                         if descendant:IsA("BasePart") then
                             eventPos = descendant.Position
                         elseif descendant.Parent:IsA("Model") and descendant.Parent.PrimaryPart then
-                            eventPos = descendant.Parent.PrimaryPart.Positio
+                            eventPos = descendant.Parent.PrimaryPart.Position
+                        elseif descendant.Parent:FindFirstChildWhichIsA("BasePart") then
+                            eventPos = descendant.Parent:FindFirstChildWhichIsA("BasePart").Position
+                        end
+                        
+                        if eventPos then
+                            local distance = (hrp.Position - eventPos).Magnitude
+                            
+                            if distance <= detectionRange then
+                                local originalPos = hrp.CFrame
+                                teleportTo(CONFIG.SafezonePos)
+                                task.wait(1)
+                                hrp.CFrame = originalPos
+                                task.wait(2)
+                            end
+                        end
+                    end
+                end
+                task.wait(0.1)
+            end
+        end)
+    end
+end)
+
+-- Iniciar monitoramento
+monitorRemoteEvents()
+
+-- Notificação de carregamento
+game:GetService("StarterGui"):SetCore("SendNotification", {
+    Title = "TSUG Panel";
+    Text = "Painel carregado com sucesso!";
+    Duration = 3;
+})
+
+print("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+print("TSUG Panel v1.0")
+print("Status: ✓ Carregado")
+print("━━━━━━━━━━━━━━━━━━━━━━━━━━")
