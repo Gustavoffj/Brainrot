@@ -19,7 +19,7 @@ local CONFIG = {
     
     -- Tamanhos
     PanelWidth = 300,     -- Largura do painel
-    PanelHeight = 300,    -- Altura do painel
+    PanelHeight = 270,    -- Altura do painel
     ButtonHeight = 45,    -- Altura dos botões
     
     -- Transparência
@@ -297,61 +297,136 @@ createButton("🟦 TP Bloco", UDim2.new(0, 0, 0, 110), function()
 end)
 
 -- ═══════════════════════════════════════════════
--- SISTEMA DE CRONÔMETRO AUTOMÁTICO (17 segundos)
+-- SISTEMA DE AUTO TP (Detecta MeshParts em movimento)
 -- ═══════════════════════════════════════════════
-local timerActive = false
-local timerButton
-local timerDisplay
+local autoTpActive = false
+local autoTpButton
+local monitoredParts = {}
+local detectionRange = 20 -- Distância em studs para teleportar
 
--- Criar botão do cronômetro
-timerButton = createButton("⏱️ Auto TP (OFF)", UDim2.new(0, 0, 0, 165), function()
-    timerActive = not timerActive
+-- Lista de nomes perigosos para MeshParts
+local dangerousMeshNames = {
+    "slow", "fast", "normal", "superslow", "speed",
+    "Slow", "Fast", "Normal", "SuperSlow", "Speed",
+    "SLOW", "FAST", "NORMAL", "SUPERSLOW", "SPEED"
+}
+
+-- Função para verificar se é uma MeshPart perigosa
+local function isDangerousMesh(name)
+    for _, meshName in pairs(dangerousMeshNames) do
+        if string.find(string.lower(name), string.lower(meshName)) then
+            return true
+        end
+    end
+    return false
+end
+
+-- Função para verificar se a parte está vindo na direção do player
+local function isComingTowardsPlayer(part, oldPos, newPos)
+    local character = player.Character
+    if not character then return false end
     
-    if timerActive then
-        timerButton.Text = "⏱️ Auto TP (ON)"
-        timerButton.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false end
+    
+    -- Calcular distâncias
+    local oldDistance = (oldPos - hrp.Position).Magnitude
+    local newDistance = (newPos - hrp.Position).Magnitude
+    
+    -- Se a nova distância é menor que a antiga, está se aproximando
+    return newDistance < oldDistance
+end
+
+-- Função para monitorar uma MeshPart específica
+local function monitorMeshPart(meshPart)
+    if monitoredParts[meshPart] then return end
+    
+    monitoredParts[meshPart] = true
+    
+    task.spawn(function()
+        local lastPosition = meshPart.Position
         
-        -- Iniciar cronômetro
-        task.spawn(function()
-            while timerActive do
-                for i = 17, 0, -1 do
-                    if not timerActive then break end
+        while autoTpActive and meshPart.Parent and monitoredParts[meshPart] do
+            task.wait(0.1)
+            
+            local character = player.Character
+            if character then
+                local hrp = character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    local currentPosition = meshPart.Position
                     
-                    -- Atualizar display
-                    timerDisplay.Text = "⏰ Tempo: " .. i .. "s"
+                    -- Verificar se está em movimento
+                    local hasMoved = (currentPosition - lastPosition).Magnitude > 0.5
                     
-                    -- Se chegou a 0, teleportar
-                    if i == 0 then
-                        teleportTo(Vector3.new(-149.879, 0.1, -363.475))
+                    if hasMoved then
+                        -- Verificar se está vindo em direção ao player
+                        if isComingTowardsPlayer(meshPart, lastPosition, currentPosition) then
+                            -- Verificar distância
+                            local distance = (currentPosition - hrp.Position).Magnitude
+                            
+                            if distance <= detectionRange then
+                                -- TELEPORTAR PARA O INÍCIO!
+                                teleportTo(Vector3.new(-149.879, 0.1, -363.475))
+                                task.wait(2) -- Cooldown
+                            end
+                        end
                     end
                     
-                    task.wait(1)
+                    lastPosition = currentPosition
                 end
             end
-            
-            -- Resetar display quando desativar
-            timerDisplay.Text = "⏰ Tempo: --"
-        end)
+        end
+        
+        monitoredParts[meshPart] = nil
+    end)
+end
+
+-- Função para iniciar monitoramento
+local function startAutoTp()
+    -- Monitorar todas as MeshParts existentes
+    for _, descendant in pairs(workspace:GetDescendants()) do
+        if descendant:IsA("MeshPart") and isDangerousMesh(descendant.Name) then
+            monitorMeshPart(descendant)
+        end
+    end
+    
+    -- Monitorar novas MeshParts adicionadas
+    workspace.DescendantAdded:Connect(function(descendant)
+        if autoTpActive and descendant:IsA("MeshPart") and isDangerousMesh(descendant.Name) then
+            monitorMeshPart(descendant)
+        end
+    end)
+end
+
+-- Criar botão Auto TP
+autoTpButton = createButton("🛡️ Auto TP (OFF)", UDim2.new(0, 0, 0, 165), function()
+    autoTpActive = not autoTpActive
+    
+    if autoTpActive then
+        autoTpButton.Text = "🛡️ Auto TP (ON)"
+        autoTpButton.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+        startAutoTp()
     else
-        timerButton.Text = "⏱️ Auto TP (OFF)"
-        timerButton.BackgroundColor3 = CONFIG.ButtonColor
+        autoTpButton.Text = "🛡️ Auto TP (OFF)"
+        autoTpButton.BackgroundColor3 = CONFIG.ButtonColor
+        monitoredParts = {}
     end
 end)
 
--- Display do cronômetro
-timerDisplay = Instance.new("TextLabel")
-timerDisplay.Size = UDim2.new(1, 0, 0, 30)
-timerDisplay.Position = UDim2.new(0, 0, 0, 220)
-timerDisplay.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-timerDisplay.Text = "⏰ Tempo: --"
-timerDisplay.TextColor3 = CONFIG.TextColor
-timerDisplay.TextSize = 16
-timerDisplay.Font = Enum.Font.GothamBold
-timerDisplay.Parent = contentFrame
+-- Label de status
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(1, 0, 0, 30)
+statusLabel.Position = UDim2.new(0, 0, 0, 220)
+statusLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+statusLabel.Text = "🔍 Detectando MeshParts perigosas"
+statusLabel.TextColor3 = CONFIG.TextColor
+statusLabel.TextSize = 14
+statusLabel.Font = Enum.Font.Gotham
+statusLabel.Parent = contentFrame
 
-local displayCorner = Instance.new("UICorner")
-displayCorner.CornerRadius = UDim.new(0, 8)
-displayCorner.Parent = timerDisplay
+local statusCorner = Instance.new("UICorner")
+statusCorner.CornerRadius = UDim.new(0, 8)
+statusCorner.Parent = statusLabel
 
 -- Sistema de Arrastar
 local dragging = false
@@ -505,41 +580,4 @@ workspace.DescendantAdded:Connect(function(descendant)
                         if descendant:IsA("BasePart") then
                             eventPos = descendant.Position
                         elseif descendant.Parent:IsA("Model") and descendant.Parent.PrimaryPart then
-                            eventPos = descendant.Parent.PrimaryPart.Position
-                        elseif descendant.Parent:FindFirstChildWhichIsA("BasePart") then
-                            eventPos = descendant.Parent:FindFirstChildWhichIsA("BasePart").Position
-                        end
-                        
-                        if eventPos then
-                            local distance = (hrp.Position - eventPos).Magnitude
-                            
-                            if distance <= detectionRange then
-                                local originalPos = hrp.CFrame
-                                teleportTo(CONFIG.SafezonePos)
-                                task.wait(1)
-                                hrp.CFrame = originalPos
-                                task.wait(2)
-                            end
-                        end
-                    end
-                end
-                task.wait(0.1)
-            end
-        end)
-    end
-end)
-
--- Iniciar monitoramento
-monitorRemoteEvents()
-
--- Notificação de carregamento
-game:GetService("StarterGui"):SetCore("SendNotification", {
-    Title = "TSUG Panel";
-    Text = "Painel carregado com sucesso!";
-    Duration = 3;
-})
-
-print("━━━━━━━━━━━━━━━━━━━━━━━━━━")
-print("TSUG Panel v1.0")
-print("Status: ✓ Carregado")
-print("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                            eventPos = descendant.Parent.PrimaryPart.Positio
