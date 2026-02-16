@@ -19,7 +19,7 @@ local CONFIG = {
     
     -- Tamanhos
     PanelWidth = 300,     -- Largura do painel
-    PanelHeight = 220,    -- Altura do painel
+    PanelHeight = 300,    -- Altura do painel
     ButtonHeight = 45,    -- Altura dos botões
     
     -- Transparência
@@ -295,6 +295,63 @@ createButton("🟦 TP Bloco", UDim2.new(0, 0, 0, 110), function()
         end
     end)
 end)
+
+-- ═══════════════════════════════════════════════
+-- SISTEMA DE CRONÔMETRO AUTOMÁTICO (17 segundos)
+-- ═══════════════════════════════════════════════
+local timerActive = false
+local timerButton
+local timerDisplay
+
+-- Criar botão do cronômetro
+timerButton = createButton("⏱️ Auto TP (OFF)", UDim2.new(0, 0, 0, 165), function()
+    timerActive = not timerActive
+    
+    if timerActive then
+        timerButton.Text = "⏱️ Auto TP (ON)"
+        timerButton.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+        
+        -- Iniciar cronômetro
+        task.spawn(function()
+            while timerActive do
+                for i = 17, 0, -1 do
+                    if not timerActive then break end
+                    
+                    -- Atualizar display
+                    timerDisplay.Text = "⏰ Tempo: " .. i .. "s"
+                    
+                    -- Se chegou a 0, teleportar
+                    if i == 0 then
+                        teleportTo(Vector3.new(-149.879, 0.1, -363.475))
+                    end
+                    
+                    task.wait(1)
+                end
+            end
+            
+            -- Resetar display quando desativar
+            timerDisplay.Text = "⏰ Tempo: --"
+        end)
+    else
+        timerButton.Text = "⏱️ Auto TP (OFF)"
+        timerButton.BackgroundColor3 = CONFIG.ButtonColor
+    end
+end)
+
+-- Display do cronômetro
+timerDisplay = Instance.new("TextLabel")
+timerDisplay.Size = UDim2.new(1, 0, 0, 30)
+timerDisplay.Position = UDim2.new(0, 0, 0, 220)
+timerDisplay.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+timerDisplay.Text = "⏰ Tempo: --"
+timerDisplay.TextColor3 = CONFIG.TextColor
+timerDisplay.TextSize = 16
+timerDisplay.Font = Enum.Font.GothamBold
+timerDisplay.Parent = contentFrame
+
+local displayCorner = Instance.new("UICorner")
+displayCorner.CornerRadius = UDim.new(0, 8)
+displayCorner.Parent = timerDisplay
 
 -- Sistema de Arrastar
 local dragging = false
